@@ -1,111 +1,149 @@
-const { Route } = require('../models');
-const { ValidationError } = require('sequelize');
+const { Route, Assignment } = require('../models');
+const { Op } = require('sequelize');
 
-// Obtener todas las rutas
-exports.getAllRoutes = async (req, res) => {
-  try {
-    const { status, sort } = req.query;
-    let options = {};
+class RouteController {
+  // Crear una nueva ruta
+  async create(req, res) {
+    try {
+      const { origin, destination, distance_km, estimated_time, intermediate_stops = [] } = req.body;
 
-    // Filtrar por estado si se proporciona
-    if (status) {
-      options.where = { status };
-    }
+      // Validación básica
+      if (!origin || !destination || !distance_km || !estimated_time) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+      }
 
-    // Ordenar por el campo especificado en `sort`
-    if (sort && typeof sort === 'string') {
-      options.order = [sort.split(',')];
-    }
+      if (!Array.isArray(intermediate_stops)) {
+        return res.status(400).json({ error: 'Intermediate stops debe ser un array' });
+      }
 
-    // Obtener todas las rutas con las opciones aplicadas
-    const routes = await Route.findAll(options);
-    res.status(200).json(routes);
-  } catch (error) {
-    console.error('Error in getAllRoutes:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-// Obtener una ruta por ID
-exports.getRouteById = async (req, res) => {
-  try {
-    const route = await Route.findByPk(req.params.id);
-    if (route) {
-      res.status(200).json(route);
-    } else {
-      res.status(404).json({ error: 'Route not found' });
-    }
-  } catch (error) {
-    console.error('Error in getRouteById:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-// Crear una nueva ruta
-exports.createRoute = async (req, res) => {
-  try {
-    // Validar entrada
-    const { name, status, origin, destination } = req.body;
-    if (!name || !status || !origin || !destination) {
-      return res.status(400).json({ error: 'Name, status, origin, and destination are required' });
-    }
-
-    // Crear la nueva ruta
-    const newRoute = await Route.create(req.body);
-    res.status(201).json(newRoute);
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      res.status(400).json({ error: error.errors.map(e => e.message) });
-    } else {
-      console.error('Error in createRoute:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      const route = await Route.create({ 
+        origin, 
+        destination, 
+        distance_km, 
+        estimated_time, 
+        intermediate_stops, 
+        status: 'active' 
+      });
+      return res.status(201).json(route);
+    } catch (error) {
+      console.error('Error al crear ruta:', error);
+      return res.status(500).json({ error: 'Error al crear ruta' });
     }
   }
-};
 
-// Actualizar una ruta
-exports.updateRoute = async (req, res) => {
-  try {
-    // Validar entrada
-    const { name, status, origin, destination } = req.body;
-    if (!name || !status || !origin || !destination) {
-      return res.status(400).json({ error: 'Name, status, origin, and destination are required' });
-    }
+  // Obtener todas las rutas con paginación y filtrado
+  async getAll(req, res) {
+    try {
+      const { page = 1, limit = 10, status, origin, destination } = req.query;
+      const offset = (page - 1) * limit;
 
-    // Actualizar la ruta
-    const [updated] = await Route.update(req.body, {
-      where: { id: req.params.id }
-    });
+      const where = {};
+      if (status) where.status = status;
+      if (origin) where.origin = { [Op.iLike]: `%${origin}%` };
+      if (destination) where.destination = { [Op.iLike]: `%${destination}%` };
 
-    // Si la ruta se actualizó, devolver la ruta actualizada
-    if (updated) {
-      res.status(200).json({ ...req.body, id: req.params.id });
-    } else {
-      res.status(404).json({ error: 'Route not found' });
-    }
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      res.status(400).json({ error: error.errors.map(e => e.message) });
-    } else {
-      console.error('Error in updateRoute:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      const routes = await Route.findAndCountAll({
+        where,
+        limit: +limit,
+        offset: +offset,
+        order: [['created_at', 'DESC']]
+      });
+
+      return res.status(200).json({
+        routes: routes.rows,
+        totalPages: Math.ceil(routes.count / limit),
+        currentPage: +page,
+        totalCount: routes.count
+      });
+    } catch (error) {
+      console.error('Error al obtener rutas:', error);
+      return res.status(500).json({ error: 'Error al obtener rutas' });
     }
   }
-};
 
-// Eliminar una ruta
-exports.deleteRoute = async (req, res) => {
-  try {
-    const deleted = await Route.destroy({
-      where: { id: req.params.id }
-    });
-    if (deleted) {
-      res.status(204).send();
-    } else {
-      res.status(404).json({ error: 'Route not found' });
+  // Obtener una ruta por ID
+  async getById(req, res) {
+    try {
+      const route = await Route.findByPk(req.params.id);
+      if (!route) return res.status(404).json({ error: 'Ruta no encontrada' });
+      return res.status(200).json(route);
+    } catch (error) {
+      console.error('Error al obtener ruta por ID:', error);
+      return res.status(500).json({ error: 'Error al obtener ruta por ID' });
     }
-  } catch (error) {
-    console.error('Error in deleteRoute:', error);
-    res.status(500).json({ error: 'Internal server error' });
   }
-};
+
+  // Actualizar una ruta
+  async update(req, res) {
+    try {
+      const route = await Route.findByPk(req.params.id);
+      if (!route) return res.status(404).json({ error: 'Ruta no encontrada' });
+
+      const { intermediate_stops } = req.body;
+      if (intermediate_stops && !Array.isArray(intermediate_stops)) {
+        return res.status(400).json({ error: 'Intermediate stops debe ser un array' });
+      }
+
+      const updatedRoute = await route.update(req.body);
+      return res.status(200).json(updatedRoute);
+    } catch (error) {
+      console.error('Error al actualizar ruta:', error);
+      return res.status(500).json({ error: 'Error al actualizar ruta' });
+    }
+  }
+
+  // Eliminar una ruta
+  async delete(req, res) {
+    try {
+      const route = await Route.findByPk(req.params.id);
+      if (!route) return res.status(404).json({ error: 'Ruta no encontrada' });
+
+      const assignmentsUsingRoute = await Assignment.count({ where: { route_id: req.params.id } });
+      if (assignmentsUsingRoute > 0) {
+        return res.status(400).json({ error: 'No se puede eliminar la ruta porque está siendo utilizada en asignaciones' });
+      }
+
+      await route.destroy();
+      return res.status(204).send();
+    } catch (error) {
+      console.error('Error al eliminar ruta:', error);
+      return res.status(500).json({ error: 'Error al eliminar ruta' });
+    }
+  }
+
+  // Obtener rutas activas
+  async getActiveRoutes(req, res) {
+    try {
+      const activeRoutes = await Route.findAll({ where: { status: 'active' }, order: [['created_at', 'DESC']] });
+      return res.status(200).json(activeRoutes);
+    } catch (error) {
+      console.error('Error al obtener rutas activas:', error);
+      return res.status(500).json({ error: 'Error al obtener rutas activas' });
+    }
+  }
+
+  // Buscar rutas por origen o destino
+  async searchRoutes(req, res) {
+    try {
+      const { query } = req.query;
+      if (!query) return res.status(400).json({ error: 'Se requiere un término de búsqueda' });
+
+      const routes = await Route.findAll({
+        where: {
+          [Op.or]: [
+            { origin: { [Op.iLike]: `%${query}%` } },
+            { destination: { [Op.iLike]: `%${query}%` } }
+          ]
+        },
+        order: [['created_at', 'DESC']]
+      });
+
+      return res.status(200).json(routes);
+    } catch (error) {
+      console.error('Error al buscar rutas:', error);
+      return res.status(500).json({ error: 'Error al buscar rutas' });
+    }
+  }
+}
+
+module.exports = new RouteController();

@@ -1,3 +1,5 @@
+'use strict';
+
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
@@ -13,6 +15,7 @@ if (config.use_env_variable) {
   sequelize = new Sequelize(config.database, config.username, config.password, config);
 }
 
+// Leer todos los archivos en la carpeta de modelos
 fs
   .readdirSync(__dirname)
   .filter(file => {
@@ -24,6 +27,7 @@ fs
     console.log(`Loaded model: ${model.name}`);
   });
 
+// Configurar asociaciones para cada modelo
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);
@@ -34,4 +38,19 @@ Object.keys(db).forEach(modelName => {
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-module.exports = db;
+// Exportar todos los modelos
+module.exports = {
+  sequelize,
+  Sequelize,
+  Driver: db.Driver,
+  Vehicle: db.Vehicle,
+  Assignment: db.Assignment,
+  Route: db.Route,
+  Maintenance: db.Maintenance,
+  Fuel: db.Fuel,
+  Incident: db.Incident,
+  GPSTracking: db.GPSTracking,
+  Invoice: db.Invoice,
+  Client: db.Client,
+  User: db.User
+};

@@ -1,5 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Route = sequelize.define('Route', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
     origin: {
       type: DataTypes.STRING(100),
       allowNull: false,
@@ -51,11 +56,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.STRING(20),
-      defaultValue: 'active',
-      validate: {
-        isIn: [['active', 'inactive', 'under_maintenance']]
-      }
+      type: DataTypes.ENUM('active', 'inactive', 'under_maintenance'),
+      defaultValue: 'active'
     },
     created_by: {
       type: DataTypes.STRING(100),
@@ -85,7 +87,13 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Route.associate = function(models) {
-    Route.hasMany(models.Assignment);
+    Route.hasMany(models.Assignment, {
+      foreignKey: {
+        name: 'routeId',
+        allowNull: false
+      },
+      as: 'assignments'
+    });
   };
 
   // Instance method

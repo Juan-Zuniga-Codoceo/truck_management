@@ -1,16 +1,12 @@
 const express = require('express');
-const {
-  getAllRoutes,
-  createRoute,
-  updateRoute,
-  deleteRoute
-} = require('../controllers/routeController');
-
+const routeController = require('../controllers/routeController');
 const router = express.Router();
 
-router.get('/', getAllRoutes);
-router.post('/', createRoute);
-router.put('/:id', updateRoute);
-router.delete('/:id', deleteRoute);
+// Definir las rutas y conectarlas con los métodos del controlador
+router.get('/', routeController.getAllRoutes); // Obtener todas las rutas
+router.get('/:id', routeController.getRouteById); // Obtener una ruta por ID
+router.post('/', routeController.createRoute); // Crear una nueva ruta
+router.put('/:id', routeController.updateRoute); // Actualizar una ruta existente
+router.delete('/:id', routeController.deleteRoute); // Eliminar una ruta
 
 module.exports = router;

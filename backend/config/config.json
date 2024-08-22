@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "167234",
+    "database": "truck_management",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "test": {
+    "username": "postgres",
+    "password": "167234",
+    "database": "truck_management_test",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "postgres",
+    "password": "167234",
+    "database": "truck_management_production",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  }
+}

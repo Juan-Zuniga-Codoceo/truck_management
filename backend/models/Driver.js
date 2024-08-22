@@ -1,5 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Driver = sequelize.define('Driver', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
@@ -59,11 +64,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.STRING(20),
-      defaultValue: 'active',
-      validate: {
-        isIn: [['active', 'inactive', 'suspended']]
-      }
+      type: DataTypes.ENUM('active', 'inactive', 'suspended'),
+      defaultValue: 'active'
     },
     created_by: {
       type: DataTypes.STRING(100),
@@ -97,10 +99,11 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'driverId',
       as: 'assignments'
     });
-    Driver.hasMany(models.Incident, {
-      foreignKey: 'driverId',
-      as: 'incidents'
-    });
+    // Si tienes un modelo Incident, descomenta la siguiente línea
+    // Driver.hasMany(models.Incident, {
+    //   foreignKey: 'driverId',
+    //   as: 'incidents'
+    // });
   };
 
   // Instance method

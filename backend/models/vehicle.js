@@ -1,5 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Vehicle = sequelize.define('Vehicle', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
     vin: {
       type: DataTypes.STRING(50),
       allowNull: false,
@@ -48,11 +53,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.STRING(20),
-      defaultValue: 'active',
-      validate: {
-        isIn: [['active', 'maintenance', 'inactive']]
-      }
+      type: DataTypes.ENUM('active', 'maintenance', 'inactive'),
+      defaultValue: 'active'
     },
     next_maintenance_date: {
       type: DataTypes.DATE,
@@ -63,8 +65,7 @@ module.exports = (sequelize, DataTypes) => {
     insurance_expiry_date: {
       type: DataTypes.DATE,
       validate: {
-        isDate: true,
-        isAfter: new Date().toISOString() // Asegura que la fecha de expiración sea en el futuro
+        isDate: true
       }
     },
     created_by: {
@@ -100,54 +101,39 @@ module.exports = (sequelize, DataTypes) => {
     }
   });
 
-  // Asociaciones
   Vehicle.associate = function(models) {
     Vehicle.hasMany(models.Assignment, {
       foreignKey: 'vehicleId',
       as: 'assignments'
     });
-    Vehicle.hasMany(models.Maintenance, {
-      foreignKey: 'vehicleId',
-      as: 'maintenances'
-    });
-    Vehicle.hasMany(models.Fuel, {
-      foreignKey: 'vehicleId',
-      as: 'fuels'
-    });
-    Vehicle.hasMany(models.GPSTracking, {
-      foreignKey: 'vehicleId',
-      as: 'gpsTrackings'
-    });
-    Vehicle.hasMany(models.Incident, {
-      foreignKey: 'vehicleId',
-      as: 'incidents'
-    });
+    // Si tienes estos modelos, descomenta las siguientes líneas
+    // Vehicle.hasMany(models.Maintenance, {
+    //   foreignKey: 'vehicleId',
+    //   as: 'maintenances'
+    // });
+    // Vehicle.hasMany(models.Fuel, {
+    //   foreignKey: 'vehicleId',
+    //   as: 'fuelRecords'
+    // });
+    // Vehicle.hasMany(models.GPSTracking, {
+    //   foreignKey: 'vehicleId',
+    //   as: 'gpsTrackings'
+    // });
+    // Vehicle.hasMany(models.Incident, {
+    //   foreignKey: 'vehicleId',
+    //   as: 'incidents'
+    // });
   };
 
-  // Método de instancia para verificar si se necesita mantenimiento
+  // Instance method
   Vehicle.prototype.needsMaintenance = function() {
     return this.next_maintenance_date && new Date() >= this.next_maintenance_date;
   };
 
-  // Método de clase para encontrar vehículos activos
+  // Class method
   Vehicle.findActiveVehicles = function() {
     return this.findAll({
       where: {
-        status: 'active'
-      }
-    });
-  };
-
-  // Nuevo método de clase para encontrar vehículos que necesitan mantenimiento pronto
-  Vehicle.findVehiclesNeedingMaintenance = function(daysThreshold = 7) {
-    const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() + daysThreshold);
-    
-    return this.findAll({
-      where: {
-        next_maintenance_date: {
-          [sequelize.Op.lte]: thresholdDate
-        },
         status: 'active'
       }
     });

@@ -13,6 +13,8 @@ const routeRoutes = require('./routes/routeRoutes');
 const { corsMiddleware, handleCorsErrors } = require('./middlewares/corsMiddleware');
 const errorHandlerMiddleware = require('./middlewares/errorHandlerMiddleware');
 const logger = require('./utils/logger');
+const cacheMiddleware = require('./middlewares/cacheMiddleware');
+const inputSanitizationMiddleware = require('./middlewares/inputSanitizationMiddleware');
 
 const app = express();
 
@@ -26,14 +28,8 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
     },
   },
-  referrerPolicy: {
-    policy: 'strict-origin-when-cross-origin',
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  }
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
 }));
 
 // Compresión Gzip
@@ -54,9 +50,7 @@ const limiter = rateLimit({
   legacyHeaders: false,
   handler: (req, res) => {
     logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
-    res.status(429).json({
-      error: 'Too many requests, please try again later.'
-    });
+    res.status(429).json({ error: 'Too many requests, please try again later.' });
   }
 });
 app.use(limiter);
@@ -89,23 +83,32 @@ app.get('/', (req, res) => {
   res.send('Bienvenido a la API de gestión de camiones');
 });
 
-// Ejemplo de validación
-app.post('/login', [
-  body('username').isEmail().withMessage('Debe ser un email válido'),
-  body('password').isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
-    .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/, "i")
-    .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial'),
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+// Ejemplo de sanitización y validación de inputs en login
+app.post('/login', 
+  inputSanitizationMiddleware({
+    fields: {
+      username: ['trim', 'escape'],
+      password: ['trim']
+    }
+  }), 
+  [
+    body('username').isEmail().withMessage('Debe ser un email válido'),
+    body('password').isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+      .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/, "i")
+      .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial'),
+  ], 
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    // Lógica de login aquí
   }
-  // Lógica de login aquí
-});
+);
 
 // Rutas
-app.use('/api/drivers', driverRoutes);
-app.use('/api/routes', routeRoutes);
+app.use('/api/drivers', cacheMiddleware({ ttl: 300 }), driverRoutes);
+app.use('/api/routes', cacheMiddleware({ ttl: 300 }), routeRoutes);
 
 // Manejador de 404
 app.use((req, res, next) => {
@@ -118,20 +121,17 @@ app.use(errorHandlerMiddleware);
 // Manejo de promesas no capturadas
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Aplicar lógica de manejo de errores
 });
 
 // Manejo de excepciones no capturadas
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
-  // Terminar el proceso en producción
   process.exit(1);
 });
 
 // Manejo de señales de terminación
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  // Cerrar conexiones de base de datos, etc.
   process.exit(0);
 });
 

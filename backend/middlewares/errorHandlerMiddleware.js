@@ -1,4 +1,4 @@
-const { ValidationError, NotFoundError, UnauthorizedError, ForbiddenError } = require('../errors');
+const { ValidationError, NotFoundError, UnauthorizedError, ForbiddenError } = require('../utils/errors');
 const logger = require('../utils/logger');
 
 // Middleware de manejo de errores

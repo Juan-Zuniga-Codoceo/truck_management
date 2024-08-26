@@ -1,0 +1,37 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Truck Management API",
+      "description": "API para la gestión de camiones.",
+      "version": "1.0.0"
+    },
+    "servers": [
+      {
+        "url": "http://localhost:3000",
+        "description": "Servidor local"
+      }
+    ],
+    "paths": {
+      "/api/drivers": {
+        "get": {
+          "summary": "Obtener lista de conductores",
+          "responses": {
+            "200": {
+              "description": "Lista de conductores"
+            }
+          }
+        }
+      },
+      "/api/routes": {
+        "get": {
+          "summary": "Obtener lista de rutas",
+          "responses": {
+            "200": {
+              "description": "Lista de rutas"
+            }
+          }
+        }
+      }
+    }
+  }
+  

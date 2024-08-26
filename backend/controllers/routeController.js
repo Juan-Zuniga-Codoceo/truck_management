@@ -7,7 +7,6 @@ class RouteController {
     try {
       const { origin, destination, distance_km, estimated_time, intermediate_stops = [] } = req.body;
 
-      // Validación básica
       if (!origin || !destination || !distance_km || !estimated_time) {
         return res.status(400).json({ error: 'Faltan campos requeridos' });
       }
@@ -46,7 +45,7 @@ class RouteController {
         where,
         limit: +limit,
         offset: +offset,
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
       });
 
       return res.status(200).json({
@@ -98,7 +97,7 @@ class RouteController {
       const route = await Route.findByPk(req.params.id);
       if (!route) return res.status(404).json({ error: 'Ruta no encontrada' });
 
-      const assignmentsUsingRoute = await Assignment.count({ where: { route_id: req.params.id } });
+      const assignmentsUsingRoute = await Assignment.count({ where: { routeId: req.params.id } });
       if (assignmentsUsingRoute > 0) {
         return res.status(400).json({ error: 'No se puede eliminar la ruta porque está siendo utilizada en asignaciones' });
       }
@@ -108,40 +107,6 @@ class RouteController {
     } catch (error) {
       console.error('Error al eliminar ruta:', error);
       return res.status(500).json({ error: 'Error al eliminar ruta' });
-    }
-  }
-
-  // Obtener rutas activas
-  async getActiveRoutes(req, res) {
-    try {
-      const activeRoutes = await Route.findAll({ where: { status: 'active' }, order: [['created_at', 'DESC']] });
-      return res.status(200).json(activeRoutes);
-    } catch (error) {
-      console.error('Error al obtener rutas activas:', error);
-      return res.status(500).json({ error: 'Error al obtener rutas activas' });
-    }
-  }
-
-  // Buscar rutas por origen o destino
-  async searchRoutes(req, res) {
-    try {
-      const { query } = req.query;
-      if (!query) return res.status(400).json({ error: 'Se requiere un término de búsqueda' });
-
-      const routes = await Route.findAll({
-        where: {
-          [Op.or]: [
-            { origin: { [Op.iLike]: `%${query}%` } },
-            { destination: { [Op.iLike]: `%${query}%` } }
-          ]
-        },
-        order: [['created_at', 'DESC']]
-      });
-
-      return res.status(200).json(routes);
-    } catch (error) {
-      console.error('Error al buscar rutas:', error);
-      return res.status(500).json({ error: 'Error al buscar rutas' });
     }
   }
 }

@@ -10,7 +10,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 const driverRoutes = require('./routes/driverRoutes');
 const routeRoutes = require('./routes/routeRoutes');
-const { corsMiddleware, handleCorsErrors } = require('./middlewares/corsMiddleware');
+const { createCorsMiddleware, handleCorsErrors } = require('./middlewares/corsMiddleware');
 const errorHandlerMiddleware = require('./middlewares/errorHandlerMiddleware');
 const logger = require('./utils/logger');
 const cacheMiddleware = require('./middlewares/cacheMiddleware');
@@ -56,8 +56,9 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS
-app.use(corsMiddleware());
+app.use(createCorsMiddleware());
 app.use(handleCorsErrors);
+
 
 // JWT Authentication
 app.use(jwt({

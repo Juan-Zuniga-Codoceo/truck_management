@@ -141,3 +141,4 @@
 2024-08-27T14:59:35.510Z error: Redis connection error: connect ECONNREFUSED 127.0.0.1:6379
 2024-08-27T14:59:35.541Z error: Redis connection error: connect ECONNREFUSED 127.0.0.1:6379
 2024-08-27T14:59:36.441Z info: SIGINT signal received: closing HTTP server
+2024-08-27T15:00:39.263Z info: Server running on port 5000
